@@ -1,5 +1,6 @@
 use std::sync::Mutex;
-use image::DynamicImage;
+// OCR disabled for base build
+// use image::DynamicImage;
 use chrono;
 use serde::{Serialize, Deserialize};
 use once_cell::sync::Lazy;
@@ -11,9 +12,9 @@ pub static GAME_STATE: Lazy<Mutex<GameState>> = Lazy::new(|| {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GameState {
-    /// Last captured and preprocessed frame
-    #[serde(skip)]
-    pub last_frame: Option<DynamicImage>,
+    /// Last captured and preprocessed frame (disabled for base build)
+    // #[serde(skip)]
+    // pub last_frame: Option<DynamicImage>,
 
     /// Time of last capture
     pub last_capture_time: std::time::SystemTime,
