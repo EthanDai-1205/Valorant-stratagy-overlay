@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { useSettings } from './contexts/SettingsContext';
 import Overlay from './components/Overlay';
 import EconomyAdvisor from './components/EconomyAdvisor';
@@ -37,7 +36,7 @@ function App() {
     // Fetch game state from Tauri backend every 100ms
     const interval = setInterval(async () => {
       try {
-        const state = await invoke('get_game_state');
+        const state = await window.electronAPI.getGameState();
         setGameState(state);
       } catch (e) {
         console.error('Failed to fetch game state:', e);

@@ -16,48 +16,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
-
-      - name: Install Visual Studio build tools for Tauri
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
-      # OCR dependencies temporarily disabled for base build
-      # - name: Setup vcpkg for OCR dependencies
-      #   run: |
-      #     git clone https://github.com/microsoft/vcpkg.git
-      #     cd vcpkg
-      #     .\bootstrap-vcpkg.bat
-      #     .\vcpkg install leptonica tesseract --triplet x64-windows-static-md
-      #     echo "VCPKG_INSTALLED_DIR=$PWD/installed" >> $GITHUB_ENV
-
-      # - name: Set OCR environment variables
-      #   run: |
-      #     echo "LEPTONICA_INCLUDE_PATH=$VCPKG_INSTALLED_DIR/x64-windows-static-md/include" >> $GITHUB_ENV
-      #     echo "LEPTONICA_LINK_PATHS=$VCPKG_INSTALLED_DIR/x64-windows-static-md/lib" >> $GITHUB_ENV
-      #     echo "LEPTONICA_LINK_LIBS=leptonica" >> $GITHUB_ENV
-      #     echo "TESSERACT_INCLUDE_PATH=$VCPKG_INSTALLED_DIR/x64-windows-static-md/include" >> $GITHUB_ENV
-      #     echo "TESSERACT_LINK_PATHS=$VCPKG_INSTALLED_DIR/x64-windows-static-md/lib" >> $GITHUB_ENV
-      #     echo "TESSERACT_LINK_LIBS=libtesseract" >> $GITHUB_ENV
-      #     echo "VCPKGRS_DYNAMIC=1" >> $GITHUB_ENV
+          node-version: 20
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build frontend first
-        run: npm run build
-
-      - name: Build Tauri app
-        run: npm run tauri build -- --verbose
+      - name: Build frontend and package Electron app
+        run: npm run electron:build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: |
-            src-tauri/target/release/*.exe
-            src-tauri/target/release/bundle/msi/*.msi
+            release/*.exe
+            release/*.msi
