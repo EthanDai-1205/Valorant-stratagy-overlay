@@ -23,11 +23,11 @@ export function generateBuyRecommendations(gameState) {
   const { economy, our_score, enemy_score } = gameState;
   const recommendations = [];
 
-  // Calculate average team credits
-  const allTeamCredits = [economy.ownCredits, ...economy.teamCredits];
-  const averageTeamCredits = Math.round(allTeamCredits.reduce((a, b) => a + b, 0) / allTeamCredits.length);
-  const minTeamCredits = Math.min(...allTeamCredits);
-  const maxTeamCredits = Math.max(...allTeamCredits);
+  // Calculate average team credits (filter out default 800 values if OCR is still calibrating)
+  const allTeamCredits = [economy.ownCredits, ...economy.teamCredits].filter(c => c !== 800 || allTeamCredits.every(v => v === 800));
+  const averageTeamCredits = allTeamCredits.length > 0 ? Math.round(allTeamCredits.reduce((a, b) => a + b, 0) / allTeamCredits.length) : 2000;
+  const minTeamCredits = allTeamCredits.length > 0 ? Math.min(...allTeamCredits) : 800;
+  const maxTeamCredits = allTeamCredits.length > 0 ? Math.max(...allTeamCredits) : 800;
 
   // Determine buy round type
   let roundType;
@@ -54,8 +54,10 @@ export function generateBuyRecommendations(gameState) {
     recommendations.push(`👤 You can full buy (you have ${economy.ownCredits}₡)`);
   } else if (economy.ownCredits >= ECONOMY.HALF_BUY_COST) {
     recommendations.push(`👤 You can half buy (you have ${economy.ownCredits}₡)`);
+  } else if (economy.ownCredits >= ECONOMY.FORCE_BUY_THRESHOLD && our_score < enemy_score) {
+    recommendations.push(`👤 Force buy recommended (you have ${economy.ownCredits}₡)`);
   } else {
-    recommendations.push(`👤 You should eco (you have ${economy.ownCredits}₡)`);
+    recommendations.push(`👤 You should eco (you have ${economy.ownCredits}₡) - calibrate credit regions if this is wrong`);
   }
 
   // Team context

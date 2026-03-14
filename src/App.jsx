@@ -40,13 +40,9 @@ function App() {
         setGameState(state);
       } catch (e) {
         console.error('Failed to fetch game state:', e);
-        // Fallback to mock update if backend not available
-        setGameState(prev => ({
-          ...prev,
-          winProbability: Math.random(),
-        }));
+        // Don't randomize win probability - keep last valid value
       }
-    }, 100);
+    }, 1000); // Reduced to 1s from 100ms to reduce CPU usage
 
     // Keyboard shortcuts
     const handleKeyDown = (e) => {

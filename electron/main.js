@@ -181,11 +181,22 @@ async function startGameStateCapture() {
         }
       }
 
-      // Generate strategy recommendations and win probability
-      const buyRecommendations = generateBuyRecommendations(currentGameState);
-      currentGameState.buyRecommendations = buyRecommendations.recommendations;
-      currentGameState.winProbability = calculateWinProbability(currentGameState);
-      currentGameState.strategyTips = generateStrategyTips(currentGameState);
+      // Generate strategy recommendations and win probability only if we have valid data
+      if (currentGameState.our_score > 0 || currentGameState.economy.ownCredits !== 800) {
+        const buyRecommendations = generateBuyRecommendations(currentGameState);
+        currentGameState.buyRecommendations = buyRecommendations.recommendations;
+        currentGameState.winProbability = calculateWinProbability(currentGameState);
+        currentGameState.strategyTips = generateStrategyTips(currentGameState);
+      } else {
+        currentGameState.buyRecommendations = [
+          'ℹ️ Calibrate your screen regions first (Ctrl+Shift+C)',
+          'Set the coordinates for score, credits, and timer regions',
+          'Test OCR for each region to confirm detection works'
+        ];
+        currentGameState.strategyTips = [
+          '💡 Open calibration tool to set up the overlay for your screen'
+        ];
+      }
 
       currentGameState.last_capture_time = new Date().toISOString();
     } catch (e) {
