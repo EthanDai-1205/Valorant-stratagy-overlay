@@ -1,6 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri::Manager;
+
 mod capture;
 mod preprocessing;
 mod ocr;
@@ -20,12 +22,12 @@ use crate::calibration::{CalibrationSettings, auto_calibrate, validate_calibrati
 
 #[tauri::command]
 fn get_game_state() -> Result<GameState, String> {
-    Ok(GAME_STATE.lock().map_err(|e| e.to_string())?.clone())
+    Ok(GAME_STATE.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?.clone())
 }
 
 #[tauri::command]
 fn get_post_match_analysis() -> Result<PostMatchAnalysis, String> {
-    let state = GAME_STATE.lock().map_err(|e| e.to_string())?;
+    let state = GAME_STATE.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
     Ok(crate::post_match::generate_post_match_analysis(&state))
 }
 
@@ -70,7 +72,6 @@ fn run_strategy_engine() {
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_window::init())
         .invoke_handler(tauri::generate_handler![
             get_game_state,
             get_post_match_analysis,
@@ -79,6 +80,11 @@ fn main() {
             run_auto_calibration
         ])
         .setup(|app| {
+            // Initialize OCR engine first
+            if let Err(e) = crate::ocr::init_ocr() {
+                eprintln!("Warning: Failed to initialize OCR engine: {}", e);
+            }
+
             // Get the main window
             let window = app.get_webview_window("main").unwrap();
 
