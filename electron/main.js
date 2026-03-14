@@ -3,12 +3,35 @@ import isDev from 'electron-is-dev';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import screenshot from 'screenshot-desktop';
-import { createWorker } from 'tesseract.js';
+import { initOCREngine, parseScore, runOCRAndParse } from './ocrParser.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow;
+let currentGameState = {
+  last_capture_time: new Date().toISOString(),
+  current_map: null,
+  current_team: null,
+  our_score: 0,
+  enemy_score: 0,
+  round_number: 1,
+  alive_teammates: [],
+  alive_enemies: [],
+  spike_remaining: null,
+  predicted_enemy_positions: [],
+  strategy_recommendations: [],
+  ocr_status: 'initializing'
+};
+
+// Default calibration regions (can be modified via UI)
+let calibrationRegions = [
+  { name: 'Score', x: 880, y: 10, width: 160, height: 30 },
+  { name: 'Health', x: 920, y: 1030, width: 80, height: 30 },
+  { name: 'Minimap', x: 1600, y: 800, width: 300, height: 250 },
+  { name: 'Team', x: 10, y: 10, width: 150, height: 30 },
+  { name: 'Spike Timer', x: 900, y: 50, width: 120, height: 30 }
+];
 
 function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
@@ -50,32 +73,44 @@ function createWindow() {
   });
 }
 
-// OCR Worker initialization (reused for all OCR operations)
-let ocrWorker;
-async function initOCR() {
-  try {
-    ocrWorker = await createWorker('eng');
-    console.log('OCR worker initialized successfully');
-  } catch (e) {
-    console.error('Failed to initialize OCR worker:', e);
-  }
+// Automatic OCR capture loop
+async function startGameStateCapture() {
+  console.log('Starting automatic game state capture...');
+  currentGameState.ocr_status = 'running';
+
+  // Run capture every 1 second
+  setInterval(async () => {
+    try {
+      // Capture screen
+      const imgBuffer = await screenshot({ format: 'png' });
+
+      // Parse score
+      const scoreRegion = calibrationRegions.find(r => r.name === 'Score');
+      if (scoreRegion) {
+        const scoreResult = await runOCRAndParse(imgBuffer, scoreRegion, parseScore);
+        if (scoreResult) {
+          currentGameState.our_score = scoreResult.ourScore;
+          currentGameState.enemy_score = scoreResult.enemyScore;
+          console.log('Detected score:', scoreResult.ourScore, '-', scoreResult.enemyScore);
+        }
+      }
+
+      currentGameState.last_capture_time = new Date().toISOString();
+    } catch (e) {
+      console.error('Capture loop error:', e);
+    }
+  }, 1000);
 }
 
 // IPC: Get game state from backend
 ipcMain.handle('get-game-state', async () => {
-  return {
-    last_capture_time: new Date().toISOString(),
-    current_map: null,
-    current_team: null,
-    our_score: 0,
-    enemy_score: 0,
-    round_number: 1,
-    alive_teammates: [],
-    alive_enemies: [],
-    spike_remaining: null,
-    predicted_enemy_positions: [],
-    strategy_recommendations: [],
-  };
+  return { ...currentGameState };
+});
+
+// IPC: Update calibration regions from UI
+ipcMain.handle('update-calibration-regions', async (_, regions) => {
+  calibrationRegions = regions;
+  return { success: true };
 });
 
 // IPC: Capture entire screen or specific region
@@ -129,7 +164,13 @@ ipcMain.handle('test-region-ocr', async (_, region) => {
 });
 
 app.whenReady().then(async () => {
-  await initOCR();
+  const ocrReady = await initOCREngine();
+  if (ocrReady) {
+    currentGameState.ocr_status = 'ready';
+    startGameStateCapture();
+  } else {
+    currentGameState.ocr_status = 'failed';
+  }
   createWindow();
 });
 
