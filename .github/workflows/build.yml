@@ -24,11 +24,12 @@ jobs:
           toolchain: stable
 
       - name: Setup vcpkg for OCR dependencies
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: '4a600e97d4972b0617f3e0401f6f776478c7d51'
-          runVcpkgInstall: true
-          vcpkgArguments: 'leptonica tesseract --triplet x64-windows-static-md'
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+          .\vcpkg install leptonica tesseract --triplet x64-windows-static-md
+          echo "VCPKG_INSTALLED_DIR=$PWD/installed" >> $GITHUB_ENV
 
       - name: Set OCR environment variables
         run: |
