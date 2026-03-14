@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+// import { invoke } from '@tauri-apps/api/core';
 
 const PostMatchSummary = ({ show = false, onClose }) => {
   const [analysis, setAnalysis] = useState(null);
@@ -14,7 +14,57 @@ const PostMatchSummary = ({ show = false, onClose }) => {
   const loadAnalysis = async () => {
     try {
       setLoading(true);
-      const data = await invoke('get_post_match_analysis');
+      // const data = await invoke('get_post_match_analysis');
+      // Mock analysis for now
+      const data = {
+        map: 'Bind',
+        won_match: true,
+        final_score: [13, 9],
+        timestamp: new Date().toLocaleDateString(),
+        performance_summary: {
+          performance_grade: 'A',
+          total_kills: 24,
+          total_deaths: 12,
+          total_assists: 8,
+          average_damage_per_round: 187,
+          headshot_percentage: 62,
+          kd_ratio: 2.0,
+          clutch_wins: 3,
+        },
+        crosshair_placement_stats: {
+          crosshair_grade: 'B',
+          pre_aim_accuracy: 78,
+          average_reaction_time: 0.28,
+        },
+        decision_review: {
+          overall_decision_grade: 'A',
+          buy_decision_effectiveness: 92,
+          positioning_score: 84,
+          ability_usage_efficiency: 76,
+        },
+        improvement_tips: [
+          'Work on pre-aiming common angles when entering sites',
+          'Use your utility more aggressively on attack rounds',
+          'Try to play more retake scenarios with your team'
+        ],
+        key_moments: [
+          {
+            round_number: 4,
+            description: 'Clutched 1v3 to secure the spike plant',
+            impact_score: 9.2
+          },
+          {
+            round_number: 12,
+            description: '4 entry kills on A site attack to open up the round',
+            impact_score: 8.7
+          },
+          {
+            round_number: 21,
+            description: 'Perfect retake smoke usage to deny enemy plant',
+            impact_score: 7.9
+          }
+        ]
+      };
       setAnalysis(data);
     } catch (e) {
       console.error('Failed to load post-match analysis:', e);

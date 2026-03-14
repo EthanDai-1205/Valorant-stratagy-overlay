@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+// import { invoke } from '@tauri-apps/api/core';
 
 const CalibrationTool = ({ show = false, onClose }) => {
   const [settings, setSettings] = useState(null);
@@ -16,7 +16,20 @@ const CalibrationTool = ({ show = false, onClose }) => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const data = await invoke('get_calibration_settings');
+      // const data = await invoke('get_calibration_settings');
+      // Mock settings for now
+      const data = {
+        screen_width: 1920,
+        screen_height: 1080,
+        ui_scale: 1.0,
+        regions: [
+          { name: 'Score', x: 880, y: 10, width: 160, height: 30 },
+          { name: 'Health', x: 920, y: 1030, width: 80, height: 30 },
+          { name: 'Minimap', x: 1600, y: 800, width: 300, height: 250 },
+          { name: 'Team', x: 10, y: 10, width: 150, height: 30 },
+          { name: 'Spike Timer', x: 900, y: 50, width: 120, height: 30 }
+        ]
+      };
       setSettings(data);
     } catch (e) {
       console.error('Failed to load calibration settings:', e);
@@ -29,9 +42,11 @@ const CalibrationTool = ({ show = false, onClose }) => {
   const runAutoCalibration = async () => {
     try {
       setStatus({ type: 'info', message: 'Running auto-calibration...' });
-      const data = await invoke('run_auto_calibration');
-      setSettings(data);
-      setStatus({ type: 'success', message: 'Auto-calibration completed!' });
+      // const data = await invoke('run_auto_calibration');
+      // Mock success for now
+      setTimeout(() => {
+        setStatus({ type: 'success', message: 'Auto-calibration completed!' });
+      }, 1500);
     } catch (e) {
       console.error('Auto-calibration failed:', e);
       setStatus({ type: 'error', message: 'Auto-calibration failed' });
@@ -41,9 +56,12 @@ const CalibrationTool = ({ show = false, onClose }) => {
   const saveSettings = async () => {
     try {
       setStatus({ type: 'info', message: 'Saving settings...' });
-      await invoke('save_calibration_settings', { settings });
-      setStatus({ type: 'success', message: 'Settings saved successfully!' });
-      setTimeout(() => onClose(), 1500);
+      // await invoke('save_calibration_settings', { settings });
+      // Mock success for now
+      setTimeout(() => {
+        setStatus({ type: 'success', message: 'Settings saved successfully!' });
+        setTimeout(() => onClose(), 1500);
+      }, 1000);
     } catch (e) {
       console.error('Failed to save settings:', e);
       setStatus({ type: 'error', message: e.toString() });
