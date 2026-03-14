@@ -1,0 +1,50 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install Tesseract OCR
+        run: |
+          choco install tesseract --pre
+          echo "TESSDATA_PREFIX=C:\Program Files\Tesseract-OCR\tessdata" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download AI models
+        run: |
+          mkdir models
+          cd models
+          Invoke-WebRequest -Uri "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin" -OutFile "ggml-base.bin"
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            src-tauri/target/release/valorant-strategy-overlay.exe
+            src-tauri/target/release/bundle/msi/*.msi
