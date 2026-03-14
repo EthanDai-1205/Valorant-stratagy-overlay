@@ -10,7 +10,7 @@ pub static GAME_STATE: Lazy<Mutex<GameState>> = Lazy::new(|| {
     Mutex::new(GameState::default())
 });
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     /// Last captured and preprocessed frame (disabled for base build)
     // #[serde(skip)]
@@ -97,4 +97,23 @@ pub struct ScreenRegion {
     pub y: u32,
     pub width: u32,
     pub height: u32,
+}
+
+impl Default for GameState {
+    fn default() -> Self {
+        Self {
+            last_capture_time: std::time::SystemTime::now(),
+            current_map: None,
+            current_team: None,
+            our_score: 0,
+            enemy_score: 0,
+            round_number: 1,
+            alive_teammates: Vec::new(),
+            alive_enemies: Vec::new(),
+            spike_remaining: None,
+            predicted_enemy_positions: Vec::new(),
+            strategy_recommendations: Vec::new(),
+            calibration: CalibrationRegions::default(),
+        }
+    }
 }
