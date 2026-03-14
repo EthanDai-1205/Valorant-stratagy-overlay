@@ -50,10 +50,36 @@ export function parseScore(text) {
   return null;
 }
 
+// Parse economy credits from OCR result
+export function parseCredits(text) {
+  if (!text) return null;
+
+  // Clean text: remove any non-numeric characters
+  const cleaned = text.replace(/[^0-9]/g, '').trim();
+
+  if (cleaned.length >= 1 && cleaned.length <= 4) {
+    const credits = parseInt(cleaned, 10);
+    if (!isNaN(credits) && credits >= 0 && credits <= 9000) { // Valorant max credits is 9000
+      return {
+        credits,
+        confidence: ocrWorker?.lastResult?.confidence || 0
+      };
+    }
+  }
+
+  return null;
+}
+
 // Run OCR on a specific region and parse the result
-export async function runOCRAndParse(imageBuffer, region, parserFunction) {
+export async function runOCRAndParse(imageBuffer, region, parserFunction, customWhitelist = '0123456789/') {
   try {
     if (!ocrWorker) return null;
+
+    // Set custom whitelist for this specific OCR operation
+    await ocrWorker.setParameters({
+      tessedit_char_whitelist: customWhitelist,
+      tessedit_pageseg_mode: 6,
+    });
 
     const { data: { text } } = await ocrWorker.recognize(imageBuffer, {
       rectangle: {

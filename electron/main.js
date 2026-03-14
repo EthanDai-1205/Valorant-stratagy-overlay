@@ -3,7 +3,7 @@ import isDev from 'electron-is-dev';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import screenshot from 'screenshot-desktop';
-import { initOCREngine, parseScore, runOCRAndParse } from './ocrParser.js';
+import { initOCREngine, parseScore, parseCredits, runOCRAndParse } from './ocrParser.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +16,11 @@ let currentGameState = {
   our_score: 0,
   enemy_score: 0,
   round_number: 1,
+  economy: {
+    ownCredits: 800,
+    teamCredits: [800, 800, 800, 800, 800],
+    enemyCredits: [800, 800, 800, 800, 800],
+  },
   alive_teammates: [],
   alive_enemies: [],
   spike_remaining: null,
@@ -30,7 +35,12 @@ let calibrationRegions = [
   { name: 'Health', x: 920, y: 1030, width: 80, height: 30 },
   { name: 'Minimap', x: 1600, y: 800, width: 300, height: 250 },
   { name: 'Team', x: 10, y: 10, width: 150, height: 30 },
-  { name: 'Spike Timer', x: 900, y: 50, width: 120, height: 30 }
+  { name: 'Spike Timer', x: 900, y: 50, width: 120, height: 30 },
+  { name: 'Own Credits', x: 1650, y: 10, width: 80, height: 30 },
+  { name: 'Team 1 Credits', x: 10, y: 50, width: 70, height: 25 },
+  { name: 'Team 2 Credits', x: 10, y: 80, width: 70, height: 25 },
+  { name: 'Team 3 Credits', x: 10, y: 110, width: 70, height: 25 },
+  { name: 'Team 4 Credits', x: 10, y: 140, width: 70, height: 25 },
 ];
 
 function createWindow() {
@@ -92,6 +102,28 @@ async function startGameStateCapture() {
           currentGameState.our_score = scoreResult.ourScore;
           currentGameState.enemy_score = scoreResult.enemyScore;
           console.log('Detected score:', scoreResult.ourScore, '-', scoreResult.enemyScore);
+        }
+      }
+
+      // Parse own credits
+      const ownCreditsRegion = calibrationRegions.find(r => r.name === 'Own Credits');
+      if (ownCreditsRegion) {
+        const creditsResult = await runOCRAndParse(imgBuffer, ownCreditsRegion, parseCredits, '0123456789');
+        if (creditsResult) {
+          currentGameState.economy.ownCredits = creditsResult.credits;
+          console.log('Detected own credits:', creditsResult.credits);
+        }
+      }
+
+      // Parse team credits (4 teammates)
+      for (let i = 1; i <= 4; i++) {
+        const teamRegion = calibrationRegions.find(r => r.name === `Team ${i} Credits`);
+        if (teamRegion) {
+          const creditsResult = await runOCRAndParse(imgBuffer, teamRegion, parseCredits, '0123456789');
+          if (creditsResult) {
+            currentGameState.economy.teamCredits[i] = creditsResult.credits;
+            console.log(`Detected Team ${i} credits:`, creditsResult.credits);
+          }
         }
       }
 
