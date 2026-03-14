@@ -70,6 +70,41 @@ export function parseCredits(text) {
   return null;
 }
 
+// Parse round timer from OCR result
+export function parseTimer(text) {
+  if (!text) return null;
+
+  // Clean text: keep numbers and colons
+  const cleaned = text.replace(/[^0-9:]/g, '').trim();
+
+  // Match patterns like "1:45", "0:45", "45"
+  const timerMatch = cleaned.match(/(\d{1,2})?:?(\d{2})/);
+
+  if (timerMatch) {
+    const minutes = parseInt(timerMatch[1] || 0, 10);
+    const seconds = parseInt(timerMatch[2], 10);
+
+    if (!isNaN(minutes) && !isNaN(seconds) && seconds < 60 && minutes <= 2) {
+      const totalSeconds = minutes * 60 + seconds;
+      return {
+        minutes,
+        seconds,
+        totalSeconds,
+        confidence: ocrWorker?.lastResult?.confidence || 0
+      };
+    }
+  }
+
+  return null;
+}
+
+// Detect if spike is planted from OCR result
+export function detectSpikePlanted(text) {
+  if (!text) return false;
+  const lowerText = text.toLowerCase();
+  return lowerText.includes('spike') || lowerText.includes('planted') || lowerText.includes('45') || lowerText.includes('40') || lowerText.includes('35');
+}
+
 // Run OCR on a specific region and parse the result
 export async function runOCRAndParse(imageBuffer, region, parserFunction, customWhitelist = '0123456789/') {
   try {

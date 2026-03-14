@@ -3,8 +3,8 @@ import isDev from 'electron-is-dev';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import screenshot from 'screenshot-desktop';
-import { initOCREngine, parseScore, parseCredits, runOCRAndParse } from './ocrParser.js';
-import { generateBuyRecommendations, calculateWinProbability } from './strategyEngine.js';
+import { initOCREngine, parseScore, parseCredits, parseTimer, detectSpikePlanted, runOCRAndParse } from './ocrParser.js';
+import { generateBuyRecommendations, calculateWinProbability, generateStrategyTips } from './strategyEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,12 +22,14 @@ let currentGameState = {
     teamCredits: [800, 800, 800, 800, 800],
     enemyCredits: [800, 800, 800, 800, 800],
   },
+  roundTimer: { minutes: 1, seconds: 45, totalSeconds: 105 },
+  spikePlanted: false,
+  spikeRemaining: 45,
   winProbability: 0.5,
   strategyTips: [],
   buyRecommendations: [],
   alive_teammates: [],
   alive_enemies: [],
-  spike_remaining: null,
   predicted_enemy_positions: [],
   ocr_status: 'initializing'
 };
@@ -35,10 +37,12 @@ let currentGameState = {
 // Default calibration regions (can be modified via UI)
 let calibrationRegions = [
   { name: 'Score', x: 880, y: 10, width: 160, height: 30 },
+  { name: 'Round Timer', x: 920, y: 30, width: 80, height: 30 },
+  { name: 'Spike Indicator', x: 900, y: 60, width: 120, height: 30 },
   { name: 'Health', x: 920, y: 1030, width: 80, height: 30 },
+  { name: 'Armor', x: 1000, y: 1030, width: 80, height: 30 },
   { name: 'Minimap', x: 1600, y: 800, width: 300, height: 250 },
   { name: 'Team', x: 10, y: 10, width: 150, height: 30 },
-  { name: 'Spike Timer', x: 900, y: 50, width: 120, height: 30 },
   { name: 'Own Credits', x: 1650, y: 10, width: 80, height: 30 },
   { name: 'Team 1 Credits', x: 10, y: 50, width: 70, height: 25 },
   { name: 'Team 2 Credits', x: 10, y: 80, width: 70, height: 25 },
@@ -130,10 +134,36 @@ async function startGameStateCapture() {
         }
       }
 
+      // Parse round timer
+      const timerRegion = calibrationRegions.find(r => r.name === 'Round Timer');
+      if (timerRegion) {
+        const timerResult = await runOCRAndParse(imgBuffer, timerRegion, parseTimer, '0123456789:');
+        if (timerResult) {
+          currentGameState.roundTimer = timerResult;
+          console.log('Detected round timer:', `${timerResult.minutes}:${timerResult.seconds.toString().padStart(2, '0')}`);
+        }
+      }
+
+      // Detect spike planted
+      const spikeRegion = calibrationRegions.find(r => r.name === 'Spike Indicator');
+      if (spikeRegion) {
+        const spikeResult = await runOCRAndParse(imgBuffer, spikeRegion, (text) => detectSpikePlanted(text), 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ');
+        if (spikeResult) {
+          currentGameState.spikePlanted = true;
+          // Estimate spike remaining time based on timer
+          currentGameState.spikeRemaining = Math.max(0, 45 - (100 - currentGameState.roundTimer.totalSeconds));
+          console.log('Spike planted! Remaining:', currentGameState.spikeRemaining);
+        } else {
+          currentGameState.spikePlanted = false;
+          currentGameState.spikeRemaining = null;
+        }
+      }
+
       // Generate strategy recommendations and win probability
       const buyRecommendations = generateBuyRecommendations(currentGameState);
       currentGameState.buyRecommendations = buyRecommendations.recommendations;
       currentGameState.winProbability = calculateWinProbability(currentGameState);
+      currentGameState.strategyTips = generateStrategyTips(currentGameState);
 
       currentGameState.last_capture_time = new Date().toISOString();
     } catch (e) {

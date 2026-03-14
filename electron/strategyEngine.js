@@ -96,3 +96,31 @@ export function calculateWinProbability(gameState) {
   // Clamp between 0.1 and 0.9
   return Math.min(Math.max(probability, 0.1), 0.9);
 }
+
+// Generate strategy tips based on game state
+export function generateStrategyTips(gameState) {
+  const tips = [];
+
+  // Spike planted tips
+  if (gameState.spikePlanted) {
+    if (gameState.our_score > gameState.enemy_score) {
+      tips.push('🚨 Spike planted! Play retake positions carefully');
+    } else {
+      tips.push('🚨 Spike planted! Coordinate with team to retake site');
+    }
+    tips.push(`⏱️ Spike time remaining: ~${gameState.spikeRemaining}s`);
+  }
+
+  // Round timer tips
+  if (gameState.roundTimer.totalSeconds < 30 && !gameState.spikePlanted) {
+    tips.push('⏱️ Less than 30s remaining in round! Push site or play for time');
+  }
+
+  // Economy tips
+  const averageTeamCredits = Math.round([gameState.economy.ownCredits, ...gameState.economy.teamCredits].reduce((a, b) => a + b, 0) / 5);
+  if (averageTeamCredits < 1500 && gameState.roundTimer.totalSeconds > 100) {
+    tips.push('💸 Low team economy! Play passive this round');
+  }
+
+  return tips;
+}
