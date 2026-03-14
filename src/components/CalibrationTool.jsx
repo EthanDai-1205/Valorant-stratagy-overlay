@@ -6,6 +6,7 @@ const CalibrationTool = ({ show = false, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [status, setStatus] = useState('');
+  const [ocrResults, setOcrResults] = useState({});
 
   useEffect(() => {
     if (show) {
@@ -75,6 +76,29 @@ const CalibrationTool = ({ show = false, onClose }) => {
     setSettings({ ...settings, regions: newRegions });
   };
 
+  const testRegionOCR = async (index, region) => {
+    try {
+      setStatus({ type: 'info', message: `Testing OCR for ${region.name} region...` });
+      const result = await window.electronAPI.testRegionOCR(region);
+
+      if (result.success) {
+        setOcrResults(prev => ({
+          ...prev,
+          [index]: result
+        }));
+        setStatus({
+          type: 'success',
+          message: `OCR successful! Read "${result.text}" (confidence: ${result.confidence.toFixed(1)}%)`
+        });
+      } else {
+        setStatus({ type: 'error', message: `OCR failed: ${result.error}` });
+      }
+    } catch (e) {
+      console.error('OCR test failed:', e);
+      setStatus({ type: 'error', message: `OCR test failed: ${e.message}` });
+    }
+  };
+
   if (!show) return null;
 
   return (
@@ -129,9 +153,30 @@ const CalibrationTool = ({ show = false, onClose }) => {
                   <div
                     key={region.name}
                     className={`region-item ${selectedRegion === index ? 'selected' : ''}`}
-                    onClick={() => setSelectedRegion(index)}
                   >
-                    <div className="region-name">{region.name}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div className="region-name" onClick={() => setSelectedRegion(index)} style={{ cursor: 'pointer', flex: 1 }}>
+                        {region.name}
+                      </div>
+                      <button
+                        className="btn btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          testRegionOCR(index, region);
+                        }}
+                        style={{
+                          padding: '4px 12px',
+                          fontSize: '12px',
+                          background: '#ffd000',
+                          color: 'black',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Test OCR
+                      </button>
+                    </div>
                     <div className="region-fields">
                       <div className="field">
                         <label>X:</label>
@@ -174,6 +219,22 @@ const CalibrationTool = ({ show = false, onClose }) => {
                         />
                       </div>
                     </div>
+                    {ocrResults[index] && (
+                      <div style={{
+                        marginTop: '8px',
+                        padding: '8px',
+                        background: 'rgba(0, 255, 170, 0.1)',
+                        border: '1px solid #00ffaa',
+                        borderRadius: '4px',
+                        fontSize: '12px'
+                      }}>
+                        <div style={{ color: '#00ffaa', fontWeight: 'bold' }}>OCR Result:</div>
+                        <div style={{ color: 'white' }}>"{ocrResults[index].text}"</div>
+                        <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '11px' }}>
+                          Confidence: {ocrResults[index].confidence.toFixed(1)}%
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

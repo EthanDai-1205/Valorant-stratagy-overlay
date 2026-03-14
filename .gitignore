@@ -27,3 +27,4 @@ Thumbs.db
 models/
 *.bin
 *.pt
+release/

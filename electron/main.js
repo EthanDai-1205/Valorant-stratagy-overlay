@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import isDev from 'electron-is-dev';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import screenshot from 'screenshot-desktop';
+import { createWorker } from 'tesseract.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,7 +50,18 @@ function createWindow() {
   });
 }
 
-// IPC Example: Get game state from backend (we'll add Rust sidecar later)
+// OCR Worker initialization (reused for all OCR operations)
+let ocrWorker;
+async function initOCR() {
+  try {
+    ocrWorker = await createWorker('eng');
+    console.log('OCR worker initialized successfully');
+  } catch (e) {
+    console.error('Failed to initialize OCR worker:', e);
+  }
+}
+
+// IPC: Get game state from backend
 ipcMain.handle('get-game-state', async () => {
   return {
     last_capture_time: new Date().toISOString(),
@@ -65,7 +78,60 @@ ipcMain.handle('get-game-state', async () => {
   };
 });
 
-app.whenReady().then(createWindow);
+// IPC: Capture entire screen or specific region
+ipcMain.handle('capture-screen', async (_, region = null) => {
+  try {
+    const imgBuffer = await screenshot({ format: 'png' });
+    return { success: true, data: imgBuffer.toString('base64') };
+  } catch (e) {
+    console.error('Screen capture failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+// IPC: Run OCR on a specific screen region
+ipcMain.handle('run-ocr', async (_, region) => {
+  try {
+    if (!ocrWorker) {
+      return { success: false, error: 'OCR worker not initialized' };
+    }
+
+    // Capture screen and run OCR
+    const imgBuffer = await screenshot({ format: 'png' });
+    const { data: { text } } = await ocrWorker.recognize(imgBuffer, region ? {
+      rectangle: {
+        left: region.x,
+        top: region.y,
+        width: region.width,
+        height: region.height
+      }
+    } : {});
+
+    return {
+      success: true,
+      text: text.trim(),
+      confidence: ocrWorker.lastResult?.confidence || 0
+    };
+  } catch (e) {
+    console.error('OCR failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+// IPC: Test OCR calibration for a specific region
+ipcMain.handle('test-region-ocr', async (_, region) => {
+  try {
+    const result = await ipcMain.handlers['run-ocr'](_, region);
+    return result;
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+app.whenReady().then(async () => {
+  await initOCR();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
