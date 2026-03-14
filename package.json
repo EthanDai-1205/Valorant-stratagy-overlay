@@ -29,7 +29,7 @@
   },
   "build": {
     "appId": "com.valorant.strategy.overlay",
-    "productName": "Valorant Strategy Overlay",
+    "productName": "Valorant Strategy Overlay Final Version",
     "directories": {
       "output": "release"
     },
