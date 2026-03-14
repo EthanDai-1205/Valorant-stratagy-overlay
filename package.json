@@ -40,7 +40,7 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeDirectory": true,
+      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true
     },
     "files": [
