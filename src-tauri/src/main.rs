@@ -5,7 +5,7 @@ use tauri::Manager;
 
 mod capture;
 mod preprocessing;
-mod ocr;
+// mod ocr;
 mod computer_vision;
 mod audio;
 mod state;
@@ -80,10 +80,10 @@ fn main() {
             run_auto_calibration
         ])
         .setup(|app| {
-            // Initialize OCR engine first
-            if let Err(e) = crate::ocr::init_ocr() {
-                eprintln!("Warning: Failed to initialize OCR engine: {}", e);
-            }
+            // Initialize OCR engine first (disabled for base build)
+            // if let Err(e) = crate::ocr::init_ocr() {
+            //     eprintln!("Warning: Failed to initialize OCR engine: {}", e);
+            // }
 
             // Get the main window
             let window = app.get_webview_window("main").unwrap();
