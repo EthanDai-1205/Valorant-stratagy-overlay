@@ -1,0 +1,31 @@
+[package]
+name = "valorant-strategy-overlay"
+version = "0.1.0"
+description = "Valorant Real-Time Strategy Evaluator Overlay"
+authors = ["Your Name <your@email.com>"]
+license = "MIT"
+repository = ""
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.3", features = [] }
+
+[dependencies]
+tauri = { version = "2.3", features = ["system-tray", "window-management", "dialog", "shell"] }
+tauri-plugin-window = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tesseract = "0.14"
+screenshots = "0.8.1"
+cpal = "0.15"
+whisper-rs = { version = "0.11", features = ["coreml"] }
+rand = "0.8"
+chrono = "0.4"
+once_cell = "1.19"
+opencv = { version = "0.91", features = ["imgcodecs", "imgproc", "highgui", "core"] }
+ultralytics = "0.1.0"
+image = "0.25"
+
+[features]
+default = []
+custom-protocol = ["tauri/custom-protocol"]
