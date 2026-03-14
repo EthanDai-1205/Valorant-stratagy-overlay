@@ -23,6 +23,23 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Setup vcpkg for OCR dependencies
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '4a600e97d4972b0617f3e0401f6f776478c7d51'
+          runVcpkgInstall: true
+          vcpkgArguments: 'leptonica tesseract --triplet x64-windows-static-md'
+
+      - name: Set OCR environment variables
+        run: |
+          echo "LEPTONICA_INCLUDE_PATH=$VCPKG_INSTALLED_DIR/x64-windows-static-md/include" >> $GITHUB_ENV
+          echo "LEPTONICA_LINK_PATHS=$VCPKG_INSTALLED_DIR/x64-windows-static-md/lib" >> $GITHUB_ENV
+          echo "LEPTONICA_LINK_LIBS=leptonica" >> $GITHUB_ENV
+          echo "TESSERACT_INCLUDE_PATH=$VCPKG_INSTALLED_DIR/x64-windows-static-md/include" >> $GITHUB_ENV
+          echo "TESSERACT_LINK_PATHS=$VCPKG_INSTALLED_DIR/x64-windows-static-md/lib" >> $GITHUB_ENV
+          echo "TESSERACT_LINK_LIBS=libtesseract" >> $GITHUB_ENV
+          echo "VCPKGRS_DYNAMIC=1" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: npm install
 
