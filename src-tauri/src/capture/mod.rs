@@ -47,11 +47,10 @@ pub fn start_capture() {
             last_calibration_check = std::time::Instant::now();
         }
 
-        // Performance optimization: skip 1 out of 3 frames to reduce CPU usage
-        // Still maintain 20 FPS effective capture rate
+        // Performance optimization: skip 2 out of 3 frames to reduce CPU usage
         frame_counter += 1;
-        if frame_counter % 3 == 0 {
-            std::thread::sleep(Duration::from_millis(16)); // ~60 FPS base, skip to ~20 FPS
+        if frame_counter % 3 != 0 {
+            std::thread::sleep(Duration::from_millis(16));
             continue;
         }
 
@@ -68,18 +67,13 @@ pub fn start_capture() {
                         roi.height
                     );
 
-                    // Convert to OpenCV Mat for processing
-                    let mat = Mat::from_slice(cropped.as_raw()).unwrap();
-                    let mat = Mat::reshape(&mat, 4, cropped.height() as i32).unwrap();
-
-                    // Send to preprocessing module
-                    crate::preprocessing::process_frame(mat, &roi.name);
+                    // Send raw bytes to preprocessing
+                    crate::preprocessing::process_frame(cropped.as_raw().to_vec(), &roi.name);
                 }
             }
             Err(e) => eprintln!("Screen capture error: {}", e),
         }
 
-        // Capture at ~20 FPS (50ms interval) with frame skipping
         std::thread::sleep(Duration::from_millis(16));
     }
 }
