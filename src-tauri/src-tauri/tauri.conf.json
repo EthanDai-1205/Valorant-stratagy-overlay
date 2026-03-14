@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0",
+  "productName": "Valorant Strategy Overlay",
+  "version": "0.1.0",
+  "identifier": "com.valorant.strategy.overlay",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Valorant Strategy Overlay",
+        "width": 1920,
+        "height": 1080,
+        "resizable": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "decorations": false,
+        "shadow": false,
+        "visible": true,
+        "skipTaskbar": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-eval';"
+    }
+  },
+  "bundle": {
+    "active": false,
+    "targets": []
+  }
+}
