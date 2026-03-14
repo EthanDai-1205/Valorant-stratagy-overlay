@@ -105,6 +105,26 @@ export function detectSpikePlanted(text) {
   return lowerText.includes('spike') || lowerText.includes('planted') || lowerText.includes('45') || lowerText.includes('40') || lowerText.includes('35');
 }
 
+// Parse health/armor value from OCR result
+export function parseHealthArmor(text) {
+  if (!text) return null;
+
+  // Clean text: remove any non-numeric characters
+  const cleaned = text.replace(/[^0-9]/g, '').trim();
+
+  if (cleaned.length >= 1 && cleaned.length <= 3) {
+    const value = parseInt(cleaned, 10);
+    if (!isNaN(value) && value >= 0 && value <= 150) { // Max health+armor is 150
+      return {
+        value,
+        confidence: ocrWorker?.lastResult?.confidence || 0
+      };
+    }
+  }
+
+  return null;
+}
+
 // Run OCR on a specific region and parse the result
 export async function runOCRAndParse(imageBuffer, region, parserFunction, customWhitelist = '0123456789/') {
   try {

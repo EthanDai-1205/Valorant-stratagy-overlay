@@ -122,5 +122,13 @@ export function generateStrategyTips(gameState) {
     tips.push('💸 Low team economy! Play passive this round');
   }
 
+  // Health/armor tips
+  if (gameState.health < 50) {
+    tips.push('❤️ Low health! Play safe, avoid direct fights');
+  }
+  if (gameState.armor === 0 && gameState.economy.ownCredits >= 400) {
+    tips.push('🛡️ No armor! Buy armor first when possible');
+  }
+
   return tips;
 }

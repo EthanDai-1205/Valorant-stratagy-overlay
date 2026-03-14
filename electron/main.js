@@ -3,7 +3,7 @@ import isDev from 'electron-is-dev';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import screenshot from 'screenshot-desktop';
-import { initOCREngine, parseScore, parseCredits, parseTimer, detectSpikePlanted, runOCRAndParse } from './ocrParser.js';
+import { initOCREngine, parseScore, parseCredits, parseTimer, detectSpikePlanted, parseHealthArmor, runOCRAndParse } from './ocrParser.js';
 import { generateBuyRecommendations, calculateWinProbability, generateStrategyTips } from './strategyEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,6 +25,8 @@ let currentGameState = {
   roundTimer: { minutes: 1, seconds: 45, totalSeconds: 105 },
   spikePlanted: false,
   spikeRemaining: 45,
+  health: 100,
+  armor: 0,
   winProbability: 0.5,
   strategyTips: [],
   buyRecommendations: [],
@@ -156,6 +158,26 @@ async function startGameStateCapture() {
         } else {
           currentGameState.spikePlanted = false;
           currentGameState.spikeRemaining = null;
+        }
+      }
+
+      // Parse health
+      const healthRegion = calibrationRegions.find(r => r.name === 'Health');
+      if (healthRegion) {
+        const healthResult = await runOCRAndParse(imgBuffer, healthRegion, parseHealthArmor, '0123456789');
+        if (healthResult) {
+          currentGameState.health = healthResult.value;
+          console.log('Detected health:', healthResult.value);
+        }
+      }
+
+      // Parse armor
+      const armorRegion = calibrationRegions.find(r => r.name === 'Armor');
+      if (armorRegion) {
+        const armorResult = await runOCRAndParse(imgBuffer, armorRegion, parseHealthArmor, '0123456789');
+        if (armorResult) {
+          currentGameState.armor = armorResult.value;
+          console.log('Detected armor:', armorResult.value);
         }
       }
 
