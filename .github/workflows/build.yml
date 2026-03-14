@@ -25,9 +25,11 @@ jobs:
 
       - name: Install Tesseract OCR
         run: |
-          choco install tesseract --pre
-          echo "TESSDATA_PREFIX=C:\Program Files\Tesseract-OCR\tessdata" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Append
+          choco install tesseract --pre --yes --no-progress
+          $env:Path += ";C:\Program Files\Tesseract-OCR"
+          echo "TESSDATA_PREFIX=C:\Program Files\Tesseract-OCR\tessdata" >> $env:GITHUB_ENV
+          echo "C:\Program Files\Tesseract-OCR" >> $env:GITHUB_PATH
+          tesseract --version
 
       - name: Install dependencies
         run: npm install
