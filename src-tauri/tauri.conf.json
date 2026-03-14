@@ -30,7 +30,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "exe"],
+    "targets": ["nsis", "msi"],
     "icon": []
   }
 }
