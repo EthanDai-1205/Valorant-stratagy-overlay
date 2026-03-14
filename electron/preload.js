@@ -2,5 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getGameState: () => ipcRenderer.invoke('get-game-state'),
-  // Add more API methods as we build out functionality
+  captureScreen: (region) => ipcRenderer.invoke('capture-screen', region),
+  runOCR: (region) => ipcRenderer.invoke('run-ocr', region),
+  testRegionOCR: (region) => ipcRenderer.invoke('test-region-ocr', region),
 });

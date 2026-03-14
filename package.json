@@ -13,17 +13,19 @@
     "electron:package": "electron-builder --dir"
   },
   "dependencies": {
+    "@electron/remote": "^2.1.2",
+    "electron-is-dev": "^3.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "electron-is-dev": "^3.0.1",
-    "@electron/remote": "^2.1.2"
+    "screenshot-desktop": "^1.15.3",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.2.0",
+    "concurrently": "^9.1.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8",
-    "concurrently": "^9.1.0"
+    "vite": "^6.2.0"
   },
   "build": {
     "appId": "com.valorant.strategy.overlay",
