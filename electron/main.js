@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import screenshot from 'screenshot-desktop';
 import { initOCREngine, parseScore, parseCredits, runOCRAndParse } from './ocrParser.js';
+import { generateBuyRecommendations, calculateWinProbability } from './strategyEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,11 +22,13 @@ let currentGameState = {
     teamCredits: [800, 800, 800, 800, 800],
     enemyCredits: [800, 800, 800, 800, 800],
   },
+  winProbability: 0.5,
+  strategyTips: [],
+  buyRecommendations: [],
   alive_teammates: [],
   alive_enemies: [],
   spike_remaining: null,
   predicted_enemy_positions: [],
-  strategy_recommendations: [],
   ocr_status: 'initializing'
 };
 
@@ -126,6 +129,11 @@ async function startGameStateCapture() {
           }
         }
       }
+
+      // Generate strategy recommendations and win probability
+      const buyRecommendations = generateBuyRecommendations(currentGameState);
+      currentGameState.buyRecommendations = buyRecommendations.recommendations;
+      currentGameState.winProbability = calculateWinProbability(currentGameState);
 
       currentGameState.last_capture_time = new Date().toISOString();
     } catch (e) {
