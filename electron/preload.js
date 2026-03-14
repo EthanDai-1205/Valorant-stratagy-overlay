@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   captureScreen: (region) => ipcRenderer.invoke('capture-screen', region),
   runOCR: (region) => ipcRenderer.invoke('run-ocr', region),
   testRegionOCR: (region) => ipcRenderer.invoke('test-region-ocr', region),
+  updateCalibrationRegions: (regions) => ipcRenderer.invoke('update-calibration-regions', regions),
 });

@@ -57,12 +57,11 @@ const CalibrationTool = ({ show = false, onClose }) => {
   const saveSettings = async () => {
     try {
       setStatus({ type: 'info', message: 'Saving settings...' });
-      // await invoke('save_calibration_settings', { settings });
-      // Mock success for now
-      setTimeout(() => {
-        setStatus({ type: 'success', message: 'Settings saved successfully!' });
-        setTimeout(() => onClose(), 1500);
-      }, 1000);
+      // Save regions to backend
+      await window.electronAPI.updateCalibrationRegions(settings.regions);
+
+      setStatus({ type: 'success', message: 'Settings saved successfully!' });
+      setTimeout(() => onClose(), 1500);
     } catch (e) {
       console.error('Failed to save settings:', e);
       setStatus({ type: 'error', message: e.toString() });
