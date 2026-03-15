@@ -20,10 +20,11 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
 
       <div className="panel-content">
         {/* Status Section */}
-        <div className="section">
+        <div className="section status-section">
           <div className="section-header">
-            <h3>Status</h3>
+            <h3>System Status</h3>
             <div className={`status-indicator ${captureRunning ? 'online' : 'offline'}`}>
+              <span className="status-pulse"></span>
               {captureRunning ? 'Running' : 'Stopped'}
             </div>
           </div>
@@ -138,21 +139,22 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          background: linear-gradient(135deg, #0f0f12 0%, #1a1a20 100%);
-          border: 1px solid rgba(0, 212, 255, 0.2);
+          background: linear-gradient(135deg, #0a0a0f 0%, #1a1a22 100%);
+          border: 1px solid rgba(0, 212, 255, 0.25);
           border-radius: 20px;
-          width: 600px;
+          width: 620px;
           max-height: 90vh;
           overflow-y: auto;
           color: white;
           font-size: 14px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
           z-index: 10000;
           box-shadow:
-            0 0 40px rgba(0, 212, 255, 0.15),
-            0 30px 80px rgba(0, 0, 0, 0.8),
-            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            0 0 50px rgba(0, 212, 255, 0.2),
+            0 30px 100px rgba(0, 0, 0, 0.9),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
           animation: panelFadeIn 0.3s ease-out;
-          backdrop-filter: blur(20px);
+          backdrop-filter: blur(24px);
         }
 
         @keyframes panelFadeIn {
@@ -171,8 +173,8 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
           justify-content: space-between;
           align-items: center;
           padding: 24px 28px;
-          border-bottom: 1px solid rgba(0, 212, 255, 0.1);
-          background: linear-gradient(90deg, rgba(0, 212, 255, 0.08), rgba(255, 70, 85, 0.08));
+          border-bottom: 1px solid rgba(0, 212, 255, 0.15);
+          background: linear-gradient(90deg, rgba(0, 212, 255, 0.1), rgba(255, 70, 85, 0.1));
           border-radius: 20px 20px 0 0;
         }
 
@@ -219,12 +221,19 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
           justify-content: center;
           border-radius: 8px;
           transition: all 0.2s ease;
+          line-height: 1;
         }
 
         .close-btn:hover {
           background: rgba(255, 70, 85, 0.2);
           border-color: rgba(255, 70, 85, 0.4);
           transform: scale(1.05);
+          color: #ff4655;
+        }
+
+        .close-btn:focus-visible {
+          outline: 2px solid #ff4655;
+          outline-offset: 2px;
         }
 
         .panel-content {
@@ -245,43 +254,87 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
         .section h3 {
           margin: 0;
           font-size: 16px;
-          font-weight: 600;
+          font-weight: 700;
           color: #ffd000;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.8px;
+          text-shadow: 0 0 10px rgba(255, 208, 0, 0.3);
+        }
+
+        .status-section {
+          background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, rgba(0, 255, 170, 0.05) 100%);
+          padding: 24px;
+          border-radius: 16px;
+          border: 1px solid rgba(0, 212, 255, 0.15);
+          margin-bottom: 32px;
+        }
+
+        .status-section .section-header {
+          margin-bottom: 20px;
         }
 
         .status-indicator {
-          padding: 6px 14px;
+          padding: 8px 16px;
           border-radius: 20px;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          position: relative;
+        }
+
+        .status-pulse {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.5;
+            transform: scale(1.2);
+          }
         }
 
         .status-indicator.online {
           background: rgba(0, 255, 170, 0.15);
           color: #00ffaa;
           border: 1px solid rgba(0, 255, 170, 0.4);
-          box-shadow: 0 0 12px rgba(0, 255, 170, 0.2);
+          box-shadow: 0 0 16px rgba(0, 255, 170, 0.3), inset 0 0 8px rgba(0, 255, 170, 0.1);
+        }
+
+        .status-indicator.online .status-pulse {
+          background: #00ffaa;
         }
 
         .status-indicator.offline {
           background: rgba(255, 70, 85, 0.15);
           color: #ff4655;
           border: 1px solid rgba(255, 70, 85, 0.4);
-          box-shadow: 0 0 12px rgba(255, 70, 85, 0.2);
+          box-shadow: 0 0 16px rgba(255, 70, 85, 0.3), inset 0 0 8px rgba(255, 70, 85, 0.1);
+        }
+
+        .status-indicator.offline .status-pulse {
+          background: #ff4655;
+          animation: none;
         }
 
         .status-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 14px;
-          background: rgba(255, 255, 255, 0.03);
+          gap: 16px;
+          background: rgba(255, 255, 255, 0.04);
           padding: 20px;
           border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(0, 212, 255, 0.1);
         }
 
         .status-item {
@@ -291,21 +344,24 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
         }
 
         .status-item .label {
-          color: rgba(255, 255, 255, 0.6);
+          color: rgba(255, 255, 255, 0.7);
           font-weight: 500;
           font-size: 13px;
         }
 
         .status-item .value {
           font-weight: 600;
+          color: white;
         }
 
         .status-item .value.online {
           color: #00ffaa;
+          text-shadow: 0 0 8px rgba(0, 255, 170, 0.4);
         }
 
         .status-item .value.offline {
           color: #ff4655;
+          text-shadow: 0 0 8px rgba(255, 70, 85, 0.4);
         }
 
         .actions-grid {
@@ -323,13 +379,14 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
           border: none;
           border-radius: 14px;
           cursor: pointer;
-          font-weight: 600;
+          font-weight: 700;
           font-size: 13px;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-transform: uppercase;
-          letter-spacing: 0.3px;
+          letter-spacing: 0.5px;
           position: relative;
           overflow: hidden;
+          border: 1px solid transparent;
         }
 
         .action-btn::before {
@@ -339,8 +396,8 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
           left: -100%;
           width: 100%;
           height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-          transition: left 0.5s;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+          transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .action-btn:hover::before {
@@ -348,18 +405,30 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
         }
 
         .action-btn:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .action-btn:active {
+          transform: translateY(-1px) scale(0.99);
+          transition: all 0.1s ease;
+        }
+
+        .action-btn:focus-visible {
+          outline: 2px solid #00d4ff;
+          outline-offset: 2px;
         }
 
         .action-btn.primary {
           background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-          color: black;
+          color: #0a0a0a;
           box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+          border-color: rgba(0, 212, 255, 0.3);
         }
 
         .action-btn.primary:hover {
-          box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+          box-shadow: 0 8px 25px rgba(0, 212, 255, 0.5);
+          background: linear-gradient(135deg, #00e5ff 0%, #00aadd 100%);
         }
 
         .action-btn.secondary {
@@ -369,38 +438,45 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
         }
 
         .action-btn.secondary:hover {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
-          border-color: rgba(0, 212, 255, 0.3);
+          background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%);
+          border-color: rgba(0, 212, 255, 0.4);
+          color: #00d4ff;
         }
 
         .action-btn.success {
           background: linear-gradient(135deg, #00ffaa 0%, #00cc88 100%);
-          color: black;
+          color: #0a0a0a;
           box-shadow: 0 4px 15px rgba(0, 255, 170, 0.3);
+          border-color: rgba(0, 255, 170, 0.3);
         }
 
         .action-btn.success:hover {
-          box-shadow: 0 6px 20px rgba(0, 255, 170, 0.4);
+          box-shadow: 0 8px 25px rgba(0, 255, 170, 0.5);
+          background: linear-gradient(135deg, #00ffbb 0%, #00dd99 100%);
         }
 
         .action-btn.danger {
           background: linear-gradient(135deg, #ff4655 0%, #cc2936 100%);
           color: white;
           box-shadow: 0 4px 15px rgba(255, 70, 85, 0.3);
+          border-color: rgba(255, 70, 85, 0.3);
         }
 
         .action-btn.danger:hover {
-          box-shadow: 0 6px 20px rgba(255, 70, 85, 0.4);
+          box-shadow: 0 8px 25px rgba(255, 70, 85, 0.5);
+          background: linear-gradient(135deg, #ff5766 0%, #dd3a47 100%);
         }
 
         .action-btn.warning {
           background: linear-gradient(135deg, #ffd000 0%, #e6b800 100%);
-          color: black;
+          color: #0a0a0a;
           box-shadow: 0 4px 15px rgba(255, 208, 0, 0.3);
+          border-color: rgba(255, 208, 0, 0.3);
         }
 
         .action-btn.warning:hover {
-          box-shadow: 0 6px 20px rgba(255, 208, 0, 0.4);
+          box-shadow: 0 8px 25px rgba(255, 208, 0, 0.5);
+          background: linear-gradient(135deg, #ffe111 0%, #f7c900 100%);
         }
 
         .btn-icon {
@@ -415,15 +491,16 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
 
         .toggle-item {
           background: rgba(255, 255, 255, 0.03);
-          padding: 12px 16px;
+          padding: 14px 18px;
           border-radius: 10px;
           border: 1px solid rgba(255, 255, 255, 0.05);
           transition: all 0.2s ease;
         }
 
         .toggle-item:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(0, 212, 255, 0.2);
+          background: rgba(0, 212, 255, 0.05);
+          border-color: rgba(0, 212, 255, 0.3);
+          transform: translateX(4px);
         }
 
         .toggle-item label {
@@ -432,50 +509,62 @@ const ControlPanel = ({ show = true, onClose, onOpenCalibration, onOpenSettings,
           justify-content: space-between;
           cursor: pointer;
           font-weight: 500;
+          font-size: 14px;
         }
 
         .toggle-item input[type="checkbox"] {
           appearance: none;
-          width: 44px;
-          height: 24px;
+          width: 48px;
+          height: 26px;
           background: rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
+          border-radius: 13px;
           position: relative;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
           border: 1px solid rgba(255, 255, 255, 0.15);
+          flex-shrink: 0;
+        }
+
+        .toggle-item input[type="checkbox"]:hover {
+          background: rgba(255, 255, 255, 0.15);
         }
 
         .toggle-item input[type="checkbox"]:checked {
           background: linear-gradient(90deg, #00d4ff, #00ffaa);
           border-color: rgba(0, 212, 255, 0.4);
-          box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+          box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
         }
 
         .toggle-item input[type="checkbox"]::before {
           content: '';
           position: absolute;
-          width: 18px;
-          height: 18px;
+          width: 20px;
+          height: 20px;
           background: white;
           border-radius: 50%;
           top: 2px;
           left: 2px;
-          transition: all 0.2s ease;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .toggle-item input[type="checkbox"]:checked::before {
-          left: 22px;
+          left: 24px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 8px rgba(0, 255, 170, 0.5);
+        }
+
+        .toggle-item input[type="checkbox"]:focus-visible {
+          outline: 2px solid #00d4ff;
+          outline-offset: 2px;
         }
 
         .info {
           text-align: center;
           padding: 20px;
-          background: linear-gradient(135deg, rgba(0, 212, 255, 0.03) 0%, rgba(255, 70, 85, 0.03) 100%);
+          background: linear-gradient(135deg, rgba(0, 212, 255, 0.04) 0%, rgba(255, 70, 85, 0.04) 100%);
           border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          color: rgba(255, 255, 255, 0.7);
+          border: 1px solid rgba(0, 212, 255, 0.1);
+          color: rgba(255, 255, 255, 0.75);
         }
 
         .info p {

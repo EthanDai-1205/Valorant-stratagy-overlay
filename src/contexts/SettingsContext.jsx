@@ -9,7 +9,6 @@ const defaultSettings = {
   showStrategyTips: true,
   showWinProbability: true,
   showRoundTimer: true,
-  showAbilityCooldowns: true,
   showFPSMonitor: true,
   showPerRoundStats: true,
   positions: {
@@ -18,7 +17,6 @@ const defaultSettings = {
     strategyTips: { bottom: 120, left: 20 },
     winProbability: { top: 20, left: 20 },
     roundTimer: { top: 20, left: '50%' },
-    abilityCooldowns: { bottom: 120, right: 20 },
     fpsMonitor: { top: 20, left: 200 },
   },
 };

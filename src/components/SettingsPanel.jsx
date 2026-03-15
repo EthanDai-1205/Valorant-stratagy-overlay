@@ -90,16 +90,6 @@ const SettingsPanel = () => {
           <label>
             <input
               type="checkbox"
-              checked={settings.showAbilityCooldowns}
-              onChange={() => toggleFeature('showAbilityCooldowns')}
-            />
-            <span>Team Ability Cooldowns</span>
-          </label>
-        </div>
-        <div className="setting-item">
-          <label>
-            <input
-              type="checkbox"
               checked={settings.showFPSMonitor}
               onChange={() => toggleFeature('showFPSMonitor')}
             />
