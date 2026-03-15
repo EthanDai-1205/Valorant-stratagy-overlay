@@ -1,5 +1,24 @@
 // Valorant Strategy Engine - Generates real-time recommendations based on game state
 
+// Check if game state is still at default values (OCR not calibrated yet)
+export function isDefaultState(gameState) {
+  const { our_score, enemy_score, economy, health, armor, roundTimer } = gameState;
+
+  // Check if all values are still at their initial defaults
+  const allDefaults =
+    our_score === 0 &&
+    enemy_score === 0 &&
+    economy.ownCredits === 800 &&
+    economy.teamCredits.every(c => c === 800) &&
+    economy.enemyCredits.every(c => c === 800) &&
+    health === 100 &&
+    armor === 0 &&
+    roundTimer.minutes === 1 &&
+    roundTimer.seconds === 45;
+
+  return allDefaults;
+}
+
 // Valorant economy constants
 const ECONOMY = {
   FULL_BUY_COST: 3900, // Vandal + Full Armor + Full Utility
@@ -23,8 +42,23 @@ export function generateBuyRecommendations(gameState) {
   const { economy, our_score, enemy_score } = gameState;
   const recommendations = [];
 
+  // If we're still in default state, show calibration instructions
+  if (isDefaultState(gameState)) {
+    recommendations.push('ℹ️ OCR CALIBRATION REQUIRED');
+    recommendations.push('• Press Ctrl+Shift+C to open the calibration tool');
+    recommendations.push('• Set the correct screen regions for all game elements');
+    recommendations.push('• Test each region to ensure OCR detection works');
+    recommendations.push('• Launch Valorant and start a match for detection to begin');
+    return {
+      roundType: 'CALIBRATION NEEDED',
+      averageTeamCredits: 0,
+      recommendations,
+      weaponRecommendation: 'None',
+    };
+  }
+
   // Calculate average team credits (filter out default 800 values if OCR is still calibrating)
-  const allTeamCredits = [economy.ownCredits, ...economy.teamCredits].filter(c => c !== 800 || allTeamCredits.every(v => v === 800));
+  const allTeamCredits = [economy.ownCredits, ...economy.teamCredits].filter(c => c !== 800);
   const averageTeamCredits = allTeamCredits.length > 0 ? Math.round(allTeamCredits.reduce((a, b) => a + b, 0) / allTeamCredits.length) : 2000;
   const minTeamCredits = allTeamCredits.length > 0 ? Math.min(...allTeamCredits) : 800;
   const maxTeamCredits = allTeamCredits.length > 0 ? Math.max(...allTeamCredits) : 800;
@@ -82,6 +116,11 @@ export function generateBuyRecommendations(gameState) {
 
 // Generate win probability based on score and economy
 export function calculateWinProbability(gameState) {
+  // If we're still in default state, return neutral probability
+  if (isDefaultState(gameState)) {
+    return 0.0; // Show 0% to indicate no data
+  }
+
   const { our_score, enemy_score, economy } = gameState;
 
   // Base probability from score difference
@@ -102,6 +141,14 @@ export function calculateWinProbability(gameState) {
 // Generate strategy tips based on game state
 export function generateStrategyTips(gameState) {
   const tips = [];
+
+  // If we're still in default state, show calibration tips
+  if (isDefaultState(gameState)) {
+    tips.push('💡 OCR is not detecting game values yet');
+    tips.push('📝 Use the calibration tool to set up regions');
+    tips.push('🎮 Start a Valorant match to begin detection');
+    return tips;
+  }
 
   // Spike planted tips
   if (gameState.spikePlanted) {

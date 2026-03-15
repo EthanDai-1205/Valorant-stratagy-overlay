@@ -3,9 +3,9 @@ import isDev from 'electron-is-dev';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import screenshot from 'screenshot-desktop';
-import { initOCREngine, cleanupOCREngine, parseScore, parseCredits, parseTimer, detectSpikePlanted, parseHealthArmor, runFullScreenOCR, extractFromOCRResult } from './ocrParser.js';
+import { initOCREngine, cleanupOCREngine, parseScore, parseCredits, parseTimer, detectSpikePlanted, parseHealthArmor, runFullScreenOCR, extractFromOCRResult, setOCRWhitelist } from './ocrParser.js';
 import { calculateAverageConfidence } from './utils.js';
-import { generateBuyRecommendations, calculateWinProbability, generateStrategyTips } from './strategyEngine.js';
+import { generateBuyRecommendations, calculateWinProbability, generateStrategyTips, isDefaultState } from './strategyEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -193,20 +193,17 @@ async function startGameStateCapture() {
 
       // Generate strategy recommendations and win probability only if we have valid data
       // Only regenerate if something actually changed to avoid unnecessary recomputation
-      if (currentGameState.our_score > 0 || currentGameState.economy.ownCredits !== 800) {
+      if (!isDefaultState(currentGameState)) {
         const buyRecommendations = generateBuyRecommendations(currentGameState);
         currentGameState.buyRecommendations = buyRecommendations.recommendations;
         currentGameState.winProbability = calculateWinProbability(currentGameState);
         currentGameState.strategyTips = generateStrategyTips(currentGameState);
       } else {
-        currentGameState.buyRecommendations = [
-          'ℹ️ Calibrate your screen regions first (Ctrl+Shift+C)',
-          'Set the coordinates for score, credits, and timer regions',
-          'Test OCR for each region to confirm detection works'
-        ];
-        currentGameState.strategyTips = [
-          '💡 Open calibration tool to set up the overlay for your screen'
-        ];
+        // Use the strategy engine's default state messages for consistency
+        const buyRecommendations = generateBuyRecommendations(currentGameState);
+        currentGameState.buyRecommendations = buyRecommendations.recommendations;
+        currentGameState.winProbability = calculateWinProbability(currentGameState);
+        currentGameState.strategyTips = generateStrategyTips(currentGameState);
       }
 
       currentGameState.last_capture_time = new Date().toISOString();
@@ -243,7 +240,18 @@ ipcMain.handle('run-ocr', async (_, region) => {
   try {
     // Capture screen
     const imgBuffer = await screenshot({ format: 'png' });
-    const fullOcrResult = await runFullScreenOCR(imgBuffer);
+
+    // Determine region type for whitelisting
+    let regionType = 'default';
+    if (region.name.includes('Credits') || region.name === 'Score' || region.name === 'Health' || region.name === 'Armor') {
+      regionType = 'numeric';
+    } else if (region.name === 'Round Timer') {
+      regionType = 'timer';
+    } else if (region.name === 'Spike Indicator') {
+      regionType = 'spike';
+    }
+
+    const fullOcrResult = await runFullScreenOCR(imgBuffer, regionType);
     if (!fullOcrResult) {
       return { success: false, error: 'OCR failed to process image' };
     }
@@ -276,6 +284,38 @@ ipcMain.handle('test-region-ocr', async (_, region) => {
   } catch (e) {
     return { success: false, error: e.message };
   }
+});
+
+// IPC: Enable mouse interaction (when popup is open)
+ipcMain.handle('enable-mouse-interaction', async () => {
+  if (mainWindow) {
+    mainWindow.setIgnoreMouseEvents(false);
+    mainWindow.setFocusable(true);
+    mainWindow.focus();
+    return { success: true };
+  }
+  return { success: false, error: 'Main window not found' };
+});
+
+// IPC: Disable mouse interaction (when popup is closed)
+ipcMain.handle('disable-mouse-interaction', async () => {
+  if (mainWindow) {
+    mainWindow.setIgnoreMouseEvents(true);
+    mainWindow.setFocusable(false);
+    return { success: true };
+  }
+  return { success: false, error: 'Main window not found' };
+});
+
+// IPC: Set forward mouse events with filter (only allow clicks on non-transparent areas)
+ipcMain.handle('set-mouse-filter', async (_, enabled) => {
+  if (mainWindow) {
+    // When enabled, use forward mode to only pass clicks to non-transparent areas
+    // This maintains anti-cheat compliance as transparent areas still pass through
+    mainWindow.setIgnoreMouseEvents(enabled, { forward: true });
+    return { success: true };
+  }
+  return { success: false, error: 'Main window not found' };
 });
 
 app.whenReady().then(async () => {

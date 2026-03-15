@@ -6,7 +6,6 @@ import StrategyTips from './components/StrategyTips';
 import WinProbability from './components/WinProbability';
 import BuyRecommendations from './components/BuyRecommendations';
 import RoundTimer from './components/RoundTimer';
-import AbilityCooldownOverlay from './components/AbilityCooldownOverlay';
 import FPSMonitor from './components/FPSMonitor';
 import PerRoundStats from './components/PerRoundStats';
 import SettingsPanel from './components/SettingsPanel';
@@ -15,7 +14,7 @@ import CalibrationTool from './components/CalibrationTool';
 import ControlPanel from './components/ControlPanel';
 
 function App() {
-  const { settings, setShowSettings } = useSettings();
+  const { settings, setShowSettings, showSettings } = useSettings();
   const [gameState, setGameState] = useState({
     round: 1,
     economy: {
@@ -26,13 +25,42 @@ function App() {
     winProbability: 0.5,
     strategyTips: [],
     buyRecommendations: [],
-    teamAbilityCooldowns: [],
     roundStats: {},
     showRoundStats: false,
   });
   const [showPostMatch, setShowPostMatch] = useState(false);
   const [showCalibration, setShowCalibration] = useState(false);
   const [showControlPanel, setShowControlPanel] = useState(true); // Show on launch by default
+  const [popupOpen, setPopupOpen] = useState(true); // Track if any popup is open
+
+  // Track if any popup is open
+  useEffect(() => {
+    const anyPopupOpen = showSettings || showPostMatch || showCalibration || showControlPanel;
+    setPopupOpen(anyPopupOpen);
+  }, [showSettings, showPostMatch, showCalibration, showControlPanel]);
+
+  // Manage mouse interaction based on popup state
+  useEffect(() => {
+    const updateMouseInteraction = async () => {
+      try {
+        if (popupOpen) {
+          // When popup is open: enable full mouse interaction for the window
+          await window.electronAPI.enableMouseInteraction();
+          // Set CSS to allow pointer events on the app container
+          document.body.style.pointerEvents = 'auto';
+        } else {
+          // When no popups are open: make window click-through for anti-cheat compliance
+          await window.electronAPI.disableMouseInteraction();
+          // Set CSS to prevent pointer events on the app container
+          document.body.style.pointerEvents = 'none';
+        }
+      } catch (e) {
+        console.error('Failed to update mouse interaction:', e);
+      }
+    };
+
+    updateMouseInteraction();
+  }, [popupOpen]);
 
   useEffect(() => {
     // Fetch game state from Tauri backend every 100ms
@@ -110,11 +138,6 @@ function App() {
           </div>
         )}
 
-        {settings.showAbilityCooldowns && (
-          <div style={settings.positions.abilityCooldowns}>
-            <AbilityCooldownOverlay teamCooldowns={gameState.teamAbilityCooldowns} />
-          </div>
-        )}
 
         {settings.showFPSMonitor && (
           <div style={settings.positions.fpsMonitor}>

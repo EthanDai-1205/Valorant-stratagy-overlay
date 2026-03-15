@@ -25,6 +25,30 @@ export async function initOCREngine() {
   }
 }
 
+// Set OCR character whitelist based on region type
+export async function setOCRWhitelist(regionType) {
+  if (!ocrWorker) return;
+
+  let whitelist = '';
+  switch(regionType) {
+    case 'numeric': // For credits, score, health, armor
+      whitelist = '0123456789';
+      break;
+    case 'timer': // For round timer (numbers + colon)
+      whitelist = '0123456789:';
+      break;
+    case 'spike': // For spike detection (any characters)
+      whitelist = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ';
+      break;
+    default:
+      whitelist = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:/- ';
+  }
+
+  await ocrWorker.setParameters({
+    tessedit_char_whitelist: whitelist
+  });
+}
+
 // Cleanup Tesseract on shutdown
 export async function cleanupOCREngine() {
   if (ocrWorker) {
@@ -137,9 +161,14 @@ export function parseHealthArmor(text) {
 
 // Run full screen OCR once, then extract text for all calibrated regions
 // This is much more efficient than running OCR once per region (9x per second vs 1x per second)
-export async function runFullScreenOCR(imageBuffer) {
+export async function runFullScreenOCR(imageBuffer, regionType = null) {
   try {
     if (!ocrWorker) return null;
+
+    // Set whitelist if region type is specified
+    if (regionType) {
+      await setOCRWhitelist(regionType);
+    }
 
     const { data } = await ocrWorker.recognize(imageBuffer);
     return data.lines || [];

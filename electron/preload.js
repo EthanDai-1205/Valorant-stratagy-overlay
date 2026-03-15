@@ -6,4 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   runOCR: (region) => ipcRenderer.invoke('run-ocr', region),
   testRegionOCR: (region) => ipcRenderer.invoke('test-region-ocr', region),
   updateCalibrationRegions: (regions) => ipcRenderer.invoke('update-calibration-regions', regions),
+  enableMouseInteraction: () => ipcRenderer.invoke('enable-mouse-interaction'),
+  disableMouseInteraction: () => ipcRenderer.invoke('disable-mouse-interaction'),
+  setMouseFilter: (enabled) => ipcRenderer.invoke('set-mouse-filter', enabled),
 });
