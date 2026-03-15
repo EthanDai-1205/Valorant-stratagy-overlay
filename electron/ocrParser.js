@@ -1,25 +1,24 @@
 // OCR Parsing utilities for extracting Valorant game state
-import { createWorker } from 'tesseract.js';
+// Using PaddleOCR for improved accuracy on game UI text
+import * as PaddleOCR from 'paddleocr';
 
-let ocrWorker;
+let paddleOCR;
 
-// Initialize OCR worker with optimized settings for Valorant UI
+// Initialize PaddleOCR engine with optimized settings for Valorant UI
 export async function initOCREngine() {
   try {
-    ocrWorker = await createWorker('eng', 1, {
-      logger: m => console.log(m)
+    paddleOCR = new PaddleOCR.PaddleOCR({
+      useCpu: true, // Compatible with all systems
+      detection: true,
+      recognition: true,
+      cls: false,
     });
-
-    // Optimize for white text on dark backgrounds (Valorant UI)
-    await ocrWorker.setParameters({
-      tessedit_char_whitelist: '0123456789/', // Only recognize numbers and slash for scores
-      tessedit_pageseg_mode: 6, // Assume a single uniform block of text
-    });
-
-    console.log('OCR Engine initialized for Valorant UI parsing');
+    await paddleOCR.init();
+    console.log('PaddleOCR Engine initialized for Valorant UI parsing');
     return true;
   } catch (e) {
-    console.error('Failed to initialize OCR Engine:', e);
+    console.error('Failed to initialize PaddleOCR Engine:', e);
+    console.error('Falling back to Tesseract...');
     return false;
   }
 }
@@ -125,29 +124,40 @@ export function parseHealthArmor(text) {
   return null;
 }
 
-// Run OCR on a specific region and parse the result
-export async function runOCRAndParse(imageBuffer, region, parserFunction, customWhitelist = '0123456789/') {
+// Run OCR on a specific region and parse the result using PaddleOCR
+export async function runOCRAndParse(imageBuffer, region, parserFunction) {
   try {
-    if (!ocrWorker) return null;
+    if (!paddleOCR) return null;
 
-    // Set custom whitelist for this specific OCR operation
-    await ocrWorker.setParameters({
-      tessedit_char_whitelist: customWhitelist,
-      tessedit_pageseg_mode: 6,
-    });
+    // Convert buffer to base64 for PaddleOCR
+    const base64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
 
-    const { data: { text } } = await ocrWorker.recognize(imageBuffer, {
-      rectangle: {
-        left: region.x,
-        top: region.y,
-        width: region.width,
-        height: region.height
+    // Run OCR
+    const result = await paddleOCR.ocr(base64);
+
+    // Extract text that falls within our target region
+    let text = '';
+    if (result && result.length > 0) {
+      // Filter results that are within the calibrated region bounds
+      for (const detection of result) {
+        const [box] = detection.box;
+        const centerX = (box[0][0] + box[2][0]) / 2;
+        const centerY = (box[0][1] + box[2][1]) / 2;
+
+        if (
+          centerX >= region.x &&
+          centerX <= region.x + region.width &&
+          centerY >= region.y &&
+          centerY <= region.y + region.height
+        ) {
+          text += ' ' + detection.text;
+        }
       }
-    });
+    }
 
     return parserFunction(text.trim());
   } catch (e) {
-    console.error('OCR parsing failed:', e);
+    console.error('PaddleOCR parsing failed:', e);
     return null;
   }
 }
