@@ -300,8 +300,9 @@ ipcMain.handle('enable-mouse-interaction', async () => {
 // IPC: Disable mouse interaction (when popup is closed)
 ipcMain.handle('disable-mouse-interaction', async () => {
   if (mainWindow) {
-    mainWindow.setIgnoreMouseEvents(true);
-    mainWindow.setFocusable(false);
+    // Keep focusable always true so keyboard events (hotkeys) work even when mouse is ignored
+    mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    mainWindow.setFocusable(true);
     return { success: true };
   }
   return { success: false, error: 'Main window not found' };
