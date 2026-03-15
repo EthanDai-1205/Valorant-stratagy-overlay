@@ -12,6 +12,7 @@ import PerRoundStats from './components/PerRoundStats';
 import SettingsPanel from './components/SettingsPanel';
 import PostMatchSummary from './components/PostMatchSummary';
 import CalibrationTool from './components/CalibrationTool';
+import ControlPanel from './components/ControlPanel';
 
 function App() {
   const { settings, setShowSettings } = useSettings();
@@ -31,6 +32,7 @@ function App() {
   });
   const [showPostMatch, setShowPostMatch] = useState(false);
   const [showCalibration, setShowCalibration] = useState(false);
+  const [showControlPanel, setShowControlPanel] = useState(true); // Show on launch by default
 
   useEffect(() => {
     // Fetch game state from Tauri backend every 100ms
@@ -60,6 +62,11 @@ function App() {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
         e.preventDefault();
         setShowCalibration(prev => !prev);
+      }
+      // Open control panel: Ctrl+Shift+P / Cmd+Shift+P
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        setShowControlPanel(prev => !prev);
       }
     };
 
@@ -122,6 +129,22 @@ function App() {
         <SettingsPanel />
         <PostMatchSummary show={showPostMatch} onClose={() => setShowPostMatch(false)} />
         <CalibrationTool show={showCalibration} onClose={() => setShowCalibration(false)} />
+        <ControlPanel
+          show={showControlPanel}
+          onClose={() => setShowControlPanel(false)}
+          onOpenCalibration={() => {
+            setShowCalibration(true);
+            setShowControlPanel(false);
+          }}
+          onOpenSettings={() => {
+            setShowSettings(true);
+            setShowControlPanel(false);
+          }}
+          onOpenPostMatch={() => {
+            setShowPostMatch(true);
+            setShowControlPanel(false);
+          }}
+        />
       </Overlay>
     </div>
   );
