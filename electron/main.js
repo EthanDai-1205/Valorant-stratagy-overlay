@@ -36,20 +36,20 @@ let currentGameState = {
   ocr_status: 'initializing'
 };
 
-// Default calibration regions (can be modified via UI)
+// Default calibration regions for 2560x1440 resolution (can be modified via UI)
 let calibrationRegions = [
-  { name: 'Score', x: 880, y: 10, width: 160, height: 30 },
-  { name: 'Round Timer', x: 920, y: 30, width: 80, height: 30 },
-  { name: 'Spike Indicator', x: 900, y: 60, width: 120, height: 30 },
-  { name: 'Health', x: 920, y: 1030, width: 80, height: 30 },
-  { name: 'Armor', x: 1000, y: 1030, width: 80, height: 30 },
-  { name: 'Minimap', x: 1600, y: 800, width: 300, height: 250 },
-  { name: 'Team', x: 10, y: 10, width: 150, height: 30 },
-  { name: 'Own Credits', x: 1650, y: 10, width: 80, height: 30 },
-  { name: 'Team 1 Credits', x: 10, y: 50, width: 70, height: 25 },
-  { name: 'Team 2 Credits', x: 10, y: 80, width: 70, height: 25 },
-  { name: 'Team 3 Credits', x: 10, y: 110, width: 70, height: 25 },
-  { name: 'Team 4 Credits', x: 10, y: 140, width: 70, height: 25 },
+  { name: 'Score', x: 1173, y: 13, width: 213, height: 40 },
+  { name: 'Round Timer', x: 1227, y: 40, width: 107, height: 40 },
+  { name: 'Spike Indicator', x: 1200, y: 80, width: 160, height: 40 },
+  { name: 'Health', x: 1227, y: 1373, width: 107, height: 40 },
+  { name: 'Armor', x: 1333, y: 1373, width: 107, height: 40 },
+  { name: 'Minimap', x: 2133, y: 1067, width: 400, height: 333 },
+  { name: 'Team', x: 13, y: 13, width: 200, height: 40 },
+  { name: 'Own Credits', x: 2200, y: 13, width: 107, height: 40 },
+  { name: 'Team 1 Credits', x: 13, y: 67, width: 93, height: 33 },
+  { name: 'Team 2 Credits', x: 13, y: 107, width: 93, height: 33 },
+  { name: 'Team 3 Credits', x: 13, y: 147, width: 93, height: 33 },
+  { name: 'Team 4 Credits', x: 13, y: 187, width: 93, height: 33 },
 ];
 
 function createWindow() {
