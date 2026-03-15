@@ -1,29 +1,44 @@
 // OCR Parsing utilities for extracting Valorant game state
-// Using PaddleOCR for improved accuracy on game UI text
-import * as PaddleOCR from 'paddleocr';
+// Using Tesseract.js for reliable cross-platform OCR
+import { createWorker } from 'tesseract.js';
+import { calculateAverageConfidence } from './utils.js';
 
-let paddleOCR;
+let ocrWorker;
 
-// Initialize PaddleOCR engine with optimized settings for Valorant UI
+// Initialize OCR worker with optimized settings for Valorant UI
 export async function initOCREngine() {
   try {
-    paddleOCR = new PaddleOCR.PaddleOCR({
-      useCpu: true, // Compatible with all systems
-      detection: true,
-      recognition: true,
-      cls: false,
+    ocrWorker = await createWorker('eng', 1, {
+      logger: m => console.log(m)
     });
-    await paddleOCR.init();
-    console.log('PaddleOCR Engine initialized for Valorant UI parsing');
+
+    // Optimize for white text on dark backgrounds (Valorant UI)
+    await ocrWorker.setParameters({
+      tessedit_pageseg_mode: 6, // Assume a single uniform block of text
+    });
+
+    console.log('Tesseract OCR Engine initialized for Valorant UI parsing');
     return true;
   } catch (e) {
-    console.error('Failed to initialize PaddleOCR Engine:', e);
-    console.error('Falling back to Tesseract...');
+    console.error('Failed to initialize Tesseract OCR Engine:', e);
     return false;
   }
 }
 
-// Parse score from score region OCR result
+// Cleanup Tesseract on shutdown
+export async function cleanupOCREngine() {
+  if (ocrWorker) {
+    try {
+      await ocrWorker.terminate();
+      ocrWorker = null;
+      console.log('Tesseract OCR Engine cleaned up successfully');
+    } catch (e) {
+      console.error('Failed to cleanup Tesseract:', e);
+    }
+  }
+}
+
+// Parse score from OCR text
 export function parseScore(text) {
   if (!text) return null;
 
@@ -41,7 +56,6 @@ export function parseScore(text) {
       return {
         ourScore,
         enemyScore,
-        confidence: ocrWorker?.lastResult?.confidence || 0
       };
     }
   }
@@ -49,7 +63,7 @@ export function parseScore(text) {
   return null;
 }
 
-// Parse economy credits from OCR result
+// Parse economy credits from OCR text
 export function parseCredits(text) {
   if (!text) return null;
 
@@ -61,7 +75,6 @@ export function parseCredits(text) {
     if (!isNaN(credits) && credits >= 0 && credits <= 9000) { // Valorant max credits is 9000
       return {
         credits,
-        confidence: ocrWorker?.lastResult?.confidence || 0
       };
     }
   }
@@ -69,7 +82,7 @@ export function parseCredits(text) {
   return null;
 }
 
-// Parse round timer from OCR result
+// Parse round timer from OCR text
 export function parseTimer(text) {
   if (!text) return null;
 
@@ -89,7 +102,6 @@ export function parseTimer(text) {
         minutes,
         seconds,
         totalSeconds,
-        confidence: ocrWorker?.lastResult?.confidence || 0
       };
     }
   }
@@ -97,14 +109,14 @@ export function parseTimer(text) {
   return null;
 }
 
-// Detect if spike is planted from OCR result
+// Detect if spike is planted from OCR text
 export function detectSpikePlanted(text) {
   if (!text) return false;
   const lowerText = text.toLowerCase();
   return lowerText.includes('spike') || lowerText.includes('planted') || lowerText.includes('45') || lowerText.includes('40') || lowerText.includes('35');
 }
 
-// Parse health/armor value from OCR result
+// Parse health/armor value from OCR text
 export function parseHealthArmor(text) {
   if (!text) return null;
 
@@ -116,7 +128,6 @@ export function parseHealthArmor(text) {
     if (!isNaN(value) && value >= 0 && value <= 150) { // Max health+armor is 150
       return {
         value,
-        confidence: ocrWorker?.lastResult?.confidence || 0
       };
     }
   }
@@ -124,40 +135,60 @@ export function parseHealthArmor(text) {
   return null;
 }
 
-// Run OCR on a specific region and parse the result using PaddleOCR
-export async function runOCRAndParse(imageBuffer, region, parserFunction) {
+// Run full screen OCR once, then extract text for all calibrated regions
+// This is much more efficient than running OCR once per region (9x per second vs 1x per second)
+export async function runFullScreenOCR(imageBuffer) {
   try {
-    if (!paddleOCR) return null;
+    if (!ocrWorker) return null;
 
-    // Convert buffer to base64 for PaddleOCR
-    const base64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-
-    // Run OCR
-    const result = await paddleOCR.ocr(base64);
-
-    // Extract text that falls within our target region
-    let text = '';
-    if (result && result.length > 0) {
-      // Filter results that are within the calibrated region bounds
-      for (const detection of result) {
-        const [box] = detection.box;
-        const centerX = (box[0][0] + box[2][0]) / 2;
-        const centerY = (box[0][1] + box[2][1]) / 2;
-
-        if (
-          centerX >= region.x &&
-          centerX <= region.x + region.width &&
-          centerY >= region.y &&
-          centerY <= region.y + region.height
-        ) {
-          text += ' ' + detection.text;
-        }
-      }
-    }
-
-    return parserFunction(text.trim());
+    const { data } = await ocrWorker.recognize(imageBuffer);
+    return data.lines || [];
   } catch (e) {
-    console.error('PaddleOCR parsing failed:', e);
+    console.error('Full screen OCR failed:', e);
     return null;
   }
+}
+
+// Extract parsed result for a single region from full OCR output
+export function extractFromOCRResult(ocrLines, region, parseFunction) {
+  if (!ocrLines || !Array.isArray(ocrLines) || ocrLines.length === 0) {
+    return null;
+  }
+
+  // Tesseract.js gives us bounding boxes for each line
+  // A line counts as being in the region if its bbox intersects with our calibrated region
+  const linesInRegion = ocrLines.filter(line => {
+    const bbox = line.bbox;
+    // Check if any part of the line bbox intersects with our region
+    const lineBottom = bbox.y0 + bbox.height;
+    const lineRight = bbox.x0 + bbox.width;
+
+    // Check for intersection
+    const intersects = !(
+      bbox.x1 < region.x ||
+      bbox.x0 > region.x + region.width ||
+      bbox.y1 < region.y ||
+      bbox.y0 > region.y + region.height
+    );
+
+    return intersects;
+  });
+
+  if (linesInRegion.length === 0) {
+    return null;
+  }
+
+  // Combine all text from lines in this region
+  const text = linesInRegion.map(l => l.text).join(' ').trim();
+  const averageConfidence = calculateAverageConfidence(linesInRegion);
+
+  // Parse the combined text
+  const parsedResult = parseFunction(text);
+
+  // Add confidence to the parsed result
+  if (parsedResult && typeof parsedResult === 'object') {
+    parsedResult.confidence = averageConfidence;
+  }
+
+  return parsedResult;
 }

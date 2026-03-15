@@ -3,7 +3,8 @@ import isDev from 'electron-is-dev';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import screenshot from 'screenshot-desktop';
-import { initOCREngine, parseScore, parseCredits, parseTimer, detectSpikePlanted, parseHealthArmor, runOCRAndParse } from './ocrParser.js';
+import { initOCREngine, cleanupOCREngine, parseScore, parseCredits, parseTimer, detectSpikePlanted, parseHealthArmor, runFullScreenOCR, extractFromOCRResult } from './ocrParser.js';
+import { calculateAverageConfidence } from './utils.js';
 import { generateBuyRecommendations, calculateWinProbability, generateStrategyTips } from './strategyEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -92,33 +93,41 @@ function createWindow() {
   });
 }
 
-// Automatic OCR capture loop
+// Automatic OCR capture loop - optimized to run OCR once per capture (not once per region)
 async function startGameStateCapture() {
   console.log('Starting automatic game state capture...');
   currentGameState.ocr_status = 'running';
 
-  // Run capture every 1 second
+  // Run capture every 1 second - one OCR per second (9x faster than before)
   setInterval(async () => {
     try {
-      // Capture screen
+      // Capture screen once
       const imgBuffer = await screenshot({ format: 'png' });
 
+      // Run OCR once on the full screen
+      const fullOcrResult = await runFullScreenOCR(imgBuffer);
+      if (!fullOcrResult) return;
+
+      // Extract all regions from the single OCR result
       // Parse score
       const scoreRegion = calibrationRegions.find(r => r.name === 'Score');
       if (scoreRegion) {
-        const scoreResult = await runOCRAndParse(imgBuffer, scoreRegion, parseScore);
+        const scoreResult = extractFromOCRResult(fullOcrResult, scoreRegion, parseScore);
         if (scoreResult) {
-          currentGameState.our_score = scoreResult.ourScore;
-          currentGameState.enemy_score = scoreResult.enemyScore;
-          console.log('Detected score:', scoreResult.ourScore, '-', scoreResult.enemyScore);
+          // Only update if we got a valid score (prevents flickering)
+          if (scoreResult.ourScore !== currentGameState.our_score || scoreResult.enemyScore !== currentGameState.enemy_score) {
+            currentGameState.our_score = scoreResult.ourScore;
+            currentGameState.enemy_score = scoreResult.enemyScore;
+            console.log('Detected score:', scoreResult.ourScore, '-', scoreResult.enemyScore);
+          }
         }
       }
 
       // Parse own credits
       const ownCreditsRegion = calibrationRegions.find(r => r.name === 'Own Credits');
       if (ownCreditsRegion) {
-        const creditsResult = await runOCRAndParse(imgBuffer, ownCreditsRegion, parseCredits, '0123456789');
-        if (creditsResult) {
+        const creditsResult = extractFromOCRResult(fullOcrResult, ownCreditsRegion, parseCredits);
+        if (creditsResult && creditsResult.credits !== currentGameState.economy.ownCredits) {
           currentGameState.economy.ownCredits = creditsResult.credits;
           console.log('Detected own credits:', creditsResult.credits);
         }
@@ -128,8 +137,8 @@ async function startGameStateCapture() {
       for (let i = 1; i <= 4; i++) {
         const teamRegion = calibrationRegions.find(r => r.name === `Team ${i} Credits`);
         if (teamRegion) {
-          const creditsResult = await runOCRAndParse(imgBuffer, teamRegion, parseCredits, '0123456789');
-          if (creditsResult) {
+          const creditsResult = extractFromOCRResult(fullOcrResult, teamRegion, parseCredits);
+          if (creditsResult && creditsResult.credits !== currentGameState.economy.teamCredits[i]) {
             currentGameState.economy.teamCredits[i] = creditsResult.credits;
             console.log(`Detected Team ${i} credits:`, creditsResult.credits);
           }
@@ -139,8 +148,8 @@ async function startGameStateCapture() {
       // Parse round timer
       const timerRegion = calibrationRegions.find(r => r.name === 'Round Timer');
       if (timerRegion) {
-        const timerResult = await runOCRAndParse(imgBuffer, timerRegion, parseTimer, '0123456789:');
-        if (timerResult) {
+        const timerResult = extractFromOCRResult(fullOcrResult, timerRegion, parseTimer);
+        if (timerResult && (timerResult.minutes !== currentGameState.roundTimer.minutes || timerResult.seconds !== currentGameState.roundTimer.seconds)) {
           currentGameState.roundTimer = timerResult;
           console.log('Detected round timer:', `${timerResult.minutes}:${timerResult.seconds.toString().padStart(2, '0')}`);
         }
@@ -149,23 +158,24 @@ async function startGameStateCapture() {
       // Detect spike planted
       const spikeRegion = calibrationRegions.find(r => r.name === 'Spike Indicator');
       if (spikeRegion) {
-        const spikeResult = await runOCRAndParse(imgBuffer, spikeRegion, (text) => detectSpikePlanted(text), 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ');
-        if (spikeResult) {
-          currentGameState.spikePlanted = true;
-          // Estimate spike remaining time based on timer
-          currentGameState.spikeRemaining = Math.max(0, 45 - (100 - currentGameState.roundTimer.totalSeconds));
-          console.log('Spike planted! Remaining:', currentGameState.spikeRemaining);
-        } else {
-          currentGameState.spikePlanted = false;
-          currentGameState.spikeRemaining = null;
+        const spikeResult = extractFromOCRResult(fullOcrResult, spikeRegion, detectSpikePlanted);
+        if (spikeResult !== null && spikeResult !== currentGameState.spikePlanted) {
+          currentGameState.spikePlanted = !!spikeResult;
+          if (currentGameState.spikePlanted && currentGameState.roundTimer) {
+            // Estimate spike remaining time based on timer
+            currentGameState.spikeRemaining = Math.max(0, 45 - (100 - currentGameState.roundTimer.totalSeconds));
+            console.log('Spike planted! Remaining:', currentGameState.spikeRemaining);
+          } else {
+            currentGameState.spikeRemaining = null;
+          }
         }
       }
 
       // Parse health
       const healthRegion = calibrationRegions.find(r => r.name === 'Health');
       if (healthRegion) {
-        const healthResult = await runOCRAndParse(imgBuffer, healthRegion, parseHealthArmor, '0123456789');
-        if (healthResult) {
+        const healthResult = extractFromOCRResult(fullOcrResult, healthRegion, parseHealthArmor);
+        if (healthResult && healthResult.value !== currentGameState.health) {
           currentGameState.health = healthResult.value;
           console.log('Detected health:', healthResult.value);
         }
@@ -174,14 +184,15 @@ async function startGameStateCapture() {
       // Parse armor
       const armorRegion = calibrationRegions.find(r => r.name === 'Armor');
       if (armorRegion) {
-        const armorResult = await runOCRAndParse(imgBuffer, armorRegion, parseHealthArmor, '0123456789');
-        if (armorResult) {
+        const armorResult = extractFromOCRResult(fullOcrResult, armorRegion, parseHealthArmor);
+        if (armorResult && armorResult.value !== currentGameState.armor) {
           currentGameState.armor = armorResult.value;
           console.log('Detected armor:', armorResult.value);
         }
       }
 
       // Generate strategy recommendations and win probability only if we have valid data
+      // Only regenerate if something actually changed to avoid unnecessary recomputation
       if (currentGameState.our_score > 0 || currentGameState.economy.ownCredits !== 800) {
         const buyRecommendations = generateBuyRecommendations(currentGameState);
         currentGameState.buyRecommendations = buyRecommendations.recommendations;
@@ -227,28 +238,29 @@ ipcMain.handle('capture-screen', async (_, region = null) => {
   }
 });
 
-// IPC: Run OCR on a specific screen region
+// IPC: Run OCR on a specific screen region - for calibration testing
 ipcMain.handle('run-ocr', async (_, region) => {
   try {
-    if (!ocrWorker) {
-      return { success: false, error: 'OCR worker not initialized' };
+    // Capture screen
+    const imgBuffer = await screenshot({ format: 'png' });
+    const fullOcrResult = await runFullScreenOCR(imgBuffer);
+    if (!fullOcrResult) {
+      return { success: false, error: 'OCR failed to process image' };
     }
 
-    // Capture screen and run OCR
-    const imgBuffer = await screenshot({ format: 'png' });
-    const { data: { text } } = await ocrWorker.recognize(imgBuffer, region ? {
-      rectangle: {
-        left: region.x,
-        top: region.y,
-        width: region.width,
-        height: region.height
-      }
-    } : {});
+    const extracted = extractFromOCRResult(fullOcrResult, region, text => text);
+    let confidence = 0;
+
+    // Re-run to get confidence by extracting with parser
+    if (extracted) {
+      const withConfidence = extractFromOCRResult(fullOcrResult, region, t => t);
+      confidence = withConfidence?.confidence || 0;
+    }
 
     return {
       success: true,
-      text: text.trim(),
-      confidence: ocrWorker.lastResult?.confidence || 0
+      text: extracted || '',
+      confidence
     };
   } catch (e) {
     console.error('OCR failed:', e);
@@ -277,7 +289,8 @@ app.whenReady().then(async () => {
   createWindow();
 });
 
-app.on('window-all-closed', () => {
+app.on('window-all-closed', async () => {
+  await cleanupOCREngine();
   if (process.platform !== 'darwin') {
     app.quit();
   }
